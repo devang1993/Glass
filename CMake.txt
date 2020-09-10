@@ -1,0 +1,26 @@
+cmake_minimum_required (VERSION 3.8)
+
+project ("Glass")
+
+# specify parallel build processes
+set( CMAKE_BUILD_PARALLEL_LEVEL 8 )
+
+# specify toolchain file
+set( CMAKE_TOOLCHAIN_FILE "../vcpkg/scripts/buildsystems/vcpkg.cmake" )
+
+# specify the C++ standard
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+add_subdirectory(source)
+
+# add the executable
+add_executable(
+	main 
+	main.cpp
+	)
+
+target_link_libraries(main)
+
+target_include_directories(main)
+
