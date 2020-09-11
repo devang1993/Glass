@@ -2,6 +2,8 @@ cmake_minimum_required (VERSION 3.8)
 
 project ("Glass")
 
+# add_subdirectory(source)
+
 # specify parallel build processes
 set( CMAKE_BUILD_PARALLEL_LEVEL 8 )
 
@@ -12,15 +14,20 @@ set( CMAKE_TOOLCHAIN_FILE "../vcpkg/scripts/buildsystems/vcpkg.cmake" )
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-add_subdirectory(source)
+include_directories(
+	"../vcpkg/installed/x64-windows/include"
+	"include/glass.h"
+	"include/readFile.h"
+	"include/rwFile.h"
+	)
 
 # add the executable
 add_executable(
 	main 
-	main.cpp
+	"source/main.cpp"
+	#"source/rwFile.cpp"
 	)
 
-target_link_libraries(main)
+# target_link_libraries(main)
 
-target_include_directories(main)
 
