@@ -56,7 +56,15 @@ build cmake_object_order_depends_target_main_Debug: phony || CMakeFiles\main.dir
 
 build CMakeFiles\main.dir\source\main.cpp.obj: CXX_COMPILER__main_Debug ..\..\..\source\main.cpp || cmake_object_order_depends_target_main_Debug
   FLAGS = /DWIN32 /D_WINDOWS /W3 /GR /EHsc /MDd /Zi /Ob0 /Od /RTC1
-  INCLUDES = -I..\..\..\..\vcpkg\installed\x64-windows\include -I..\..\..\include\glass.h -I..\..\..\include\readFile.h -I..\..\..\include\rwFile.h
+  INCLUDES = -I..\..\..\..\vcpkg\installed\x64-windows\include -I..\..\..\.\include
+  OBJECT_DIR = CMakeFiles\main.dir
+  OBJECT_FILE_DIR = CMakeFiles\main.dir\source
+  TARGET_COMPILE_PDB = CMakeFiles\main.dir\
+  TARGET_PDB = main.pdb
+
+build CMakeFiles\main.dir\source\rwFile.cpp.obj: CXX_COMPILER__main_Debug ..\..\..\source\rwFile.cpp || cmake_object_order_depends_target_main_Debug
+  FLAGS = /DWIN32 /D_WINDOWS /W3 /GR /EHsc /MDd /Zi /Ob0 /Od /RTC1
+  INCLUDES = -I..\..\..\..\vcpkg\installed\x64-windows\include -I..\..\..\.\include
   OBJECT_DIR = CMakeFiles\main.dir
   OBJECT_FILE_DIR = CMakeFiles\main.dir\source
   TARGET_COMPILE_PDB = CMakeFiles\main.dir\
@@ -70,7 +78,7 @@ build CMakeFiles\main.dir\source\main.cpp.obj: CXX_COMPILER__main_Debug ..\..\..
 #############################################
 # Link the executable main.exe
 
-build main.exe: CXX_EXECUTABLE_LINKER__main_Debug CMakeFiles\main.dir\source\main.cpp.obj
+build main.exe: CXX_EXECUTABLE_LINKER__main_Debug CMakeFiles\main.dir\source\main.cpp.obj CMakeFiles\main.dir\source\rwFile.cpp.obj
   FLAGS = /DWIN32 /D_WINDOWS /W3 /GR /EHsc /MDd /Zi /Ob0 /Od /RTC1
   LINK_FLAGS = /machine:x64 /debug /INCREMENTAL /subsystem:console
   LINK_LIBRARIES = kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib

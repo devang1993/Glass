@@ -16,16 +16,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include_directories(
 	"../vcpkg/installed/x64-windows/include"
-	"include/glass.h"
-	"include/readFile.h"
-	"include/rwFile.h"
+	"./include"
 	)
 
 # add the executable
 add_executable(
 	main 
 	"source/main.cpp"
-	#"source/rwFile.cpp"
+	"source/rwFile.cpp"
 	)
 
 # target_link_libraries(main)

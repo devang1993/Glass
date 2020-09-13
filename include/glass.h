@@ -4,11 +4,9 @@
 #include<iostream>
 #include<fstream>
 #include<stdlib.h>
+#include<string>
 
-#include <opencv2/core/core.hpp>
-
-#include"../include/readFile.h"
-#include"../include/rwFile.h"
+#include"rwFile.h"
 
 typedef unsigned int int32;
 typedef short int16;
