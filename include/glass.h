@@ -5,11 +5,8 @@
 #include<fstream>
 #include<stdlib.h>
 #include<string>
+#include<filesystem>
 
 #include"rwFile.h"
-
-typedef unsigned int int32;
-typedef short int16;
-typedef unsigned char byte;
 
 #endif // !__GLASS_H__

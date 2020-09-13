@@ -1,6 +1,8 @@
 #include "rwFile.h"
 
 BMP::BMP() {
+    channels = 0;
+    redThreshold = 40;
 }
 
 BMP::~BMP() {
@@ -14,6 +16,8 @@ void BMP::read(const char* fname) {
             throw std::runtime_error("Error! Unrecognized file format.");
         }
         inp.read((char*)&bmp_info_header, sizeof(bmp_info_header));
+        
+        channels = bmp_info_header.bit_count / 8;
 
         // The BMPColorHeader is used only for transparent images
         if (bmp_info_header.bit_count == 32) {
@@ -79,6 +83,7 @@ void BMP::newBMP(int32_t width, int32_t height, bool has_alpha) {
 
     bmp_info_header.width = width;
     bmp_info_header.height = height;
+
     if (has_alpha) {
         bmp_info_header.size = sizeof(BMPInfoHeader) + sizeof(BMPColorHeader);
         file_header.offset_data = sizeof(BMPFileHeader) + sizeof(BMPInfoHeader) + sizeof(BMPColorHeader);
@@ -101,6 +106,7 @@ void BMP::newBMP(int32_t width, int32_t height, bool has_alpha) {
         uint32_t new_stride = make_stride_aligned(4);
         file_header.file_size = file_header.offset_data + static_cast<uint32_t>(data.size()) + bmp_info_header.height * (new_stride - row_stride);
     }
+    channels = bmp_info_header.bit_count / 8;
 }
 
 void BMP::write(const char* fname) {
@@ -134,23 +140,13 @@ void BMP::write(const char* fname) {
     }
 }
 
-void BMP::add_alpha(const char* fname, uint8_t alpha) {
-    BMP dummy;
-    dummy.read(fname);
-    newBMP(dummy.bmp_info_header.width, dummy.bmp_info_header.height, true);
+void BMP::add_alpha(uint8_t alpha) {
+    std::vector<uint8_t> copyData;
+    copyData.resize(data.size());
+    copyData = data;
+    newBMP(bmp_info_header.width, bmp_info_header.height, true);
     int i = 0;
-    for (int y = 0; y < dummy.bmp_info_header.height; y++)
-        for (int x = 0; x < dummy.bmp_info_header.width; x++) {
-            set_pixel(
-                x, 
-                y, 
-                dummy.data[i + 0], 
-                dummy.data[i + 1], 
-                dummy.data[i + 2], 
-                alpha
-            );
-            i += 3;
-        }
+    fill_region(0, 0, bmp_info_header.width, bmp_info_header.height, copyData, true, alpha);
 }
 
 void BMP::overlay(const char* mask) {
@@ -159,34 +155,45 @@ void BMP::overlay(const char* mask) {
     int i = 0;
     int32_t x_offset = rand() % (bmp_info_header.width - readMask.bmp_info_header.width - 1);
     int32_t y_offset = rand() % (bmp_info_header.height - readMask.bmp_info_header.height - 1);
-    uint32_t channels = bmp_info_header.bit_count / 8;
     uint8_t alpha;
-    if (channels == 4)
-        alpha = readMask.data[i + 3];
+    if (channels == 3)
+        alpha = 0;
     for (int y = y_offset; y < y_offset + readMask.bmp_info_header.height; y++)
         for (int x = x_offset; x < x_offset + readMask.bmp_info_header.width; x++) {
-            if (readMask.data[i + 2] != 0)
+            if (readMask.data[i] + readMask.data[i + 1] + readMask.data[i + 2] != 255 * 3) {
+                int dataPos = 4 * (y * bmp_info_header.width + x);
+                if (channels == 4) {
+                    alphaOverlay(data, readMask.data, i, dataPos);
+                    alpha = readMask.data[i + 3];
+                }
                 set_pixel(x, y, readMask.data[i + 0], readMask.data[i + 1], readMask.data[i + 2], alpha);
-            //data[channels * (y * dfImage_w + x) + 0] = readMask.data[i + 0];
-            //data[channels * (y * dfImage_w + x) + 1] = readMask.data[i + 1];
-            //data[channels * (y * dfImage_w + x) + 2] = readMask.data[i + 2];
-            //if (channels == 4) {
-            //    data[channels * (y * bmp_info_header.width + x) + 3] = readMask.data[i + 4];
-            //}
+            }
             i += channels;
         }
 }
 
-void BMP::bw() {
-    uint32_t channels = bmp_info_header.bit_count / 8;
-    for (int32_t i = 2; i < data.size(); i += channels) {
-        if (data[i] < 40)
-            data[i] = 0;
+void BMP::alphaOverlay(std::vector<uint8_t>& background, std::vector<uint8_t>& mask, int i, int pos) {
+    uint8_t alpha = 255;
+    // alpha blending alpha
+    alpha = mask[i + 3] + background[pos + 3] * (255 - mask[i + 3])/255;
+
+    // alpha blending colour
+    for (int j = 0; j < 3; j++)
+        mask[i + j] = ((mask[i + j] * mask[i + 3]) + background[pos+ j] * background[pos + 3] * (255 - mask[i + 3])/255) / alpha;
+
+    mask[i + 3] = alpha;
+}
+
+void BMP::setAlpha() {
+    for (int i = 2; i < data.size(); i += channels) {
+        if (data[i] < redThreshold)
+            data[i + 1] = 0;
+        else
+            data[i + 1] = 255;
     }
 }
 
 void BMP::filter_channel(bool b, bool g, bool r) {
-    uint32_t channels = bmp_info_header.bit_count / 8;
     if (b == false)
         for (int32_t i = 0; i < data.size(); i += channels)
             data[i] = 0;
@@ -198,15 +205,18 @@ void BMP::filter_channel(bool b, bool g, bool r) {
             data[i] = 0;
 }
 
-void BMP::fill_region(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint8_t B, uint8_t G, uint8_t R, uint8_t A) {
-    if (x0 + w > (uint32_t)bmp_info_header.width || y0 + h > (uint32_t)bmp_info_header.height) {
-        throw std::runtime_error("The region does not fit in the image!");
-    }
-
-    uint32_t channels = bmp_info_header.bit_count / 8;
+void BMP::fill_region(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, std::vector<uint8_t>& BGR, bool newAlpha, uint8_t alpha) {
+    uint8_t increment = channels;
+    int pos;
+    if (newAlpha)
+        increment = channels - 1;
     for (int y = y0; y < y0 + h; ++y) {
-        for (int x = x0; x < x0 + w; ++x)
-            set_pixel(x, y, B, G, R, A);
+        for (int x = x0; x < x0 + w; x++) {
+            if (!newAlpha)
+                alpha = BGR[x + 3];
+            pos = increment * (y * bmp_info_header.width + x);
+            set_pixel(x, y, BGR[pos], BGR[pos + 1], BGR[pos + 2], alpha);
+        }
     }
 }
 
@@ -214,27 +224,26 @@ void BMP::set_pixel(uint32_t x0, uint32_t y0, uint8_t B, uint8_t G, uint8_t R, u
     if (x0 > bmp_info_header.width || y0 > bmp_info_header.height) {
         throw std::runtime_error("The point is outside the image boundaries!");
     }
-
-    uint32_t channels = bmp_info_header.bit_count / 8;
-    data[channels * (y0 * bmp_info_header.width + x0) + 0] = B;
-    data[channels * (y0 * bmp_info_header.width + x0) + 1] = G;
-    data[channels * (y0 * bmp_info_header.width + x0) + 2] = R;
+    int pos = channels * (y0 * bmp_info_header.width + x0);
+    data[pos + 0] = B;
+    data[pos + 1] = G;
+    data[pos + 2] = R;
     if (channels == 4) {
-        data[channels * (y0 * bmp_info_header.width + x0) + 3] = A;
+        data[pos + 3] = A;
     }
 }
 
-void BMP::draw_rectangle(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
-    uint8_t B, uint8_t G, uint8_t R, uint8_t A, uint8_t line_w) {
-    if (x0 + w > (uint32_t)bmp_info_header.width || y0 + h > (uint32_t)bmp_info_header.height) {
-        throw std::runtime_error("The rectangle does not fit in the image!");
-    }
-
-    fill_region(x0, y0, w, line_w, B, G, R, A);                                             // top line
-    fill_region(x0, (y0 + h - line_w), w, line_w, B, G, R, A);                              // bottom line
-    fill_region((x0 + w - line_w), (y0 + line_w), line_w, (h - (2 * line_w)), B, G, R, A);  // right line
-    fill_region(x0, (y0 + line_w), line_w, (h - (2 * line_w)), B, G, R, A);                 // left line
-}
+//void BMP::draw_rectangle(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
+//    uint8_t B, uint8_t G, uint8_t R, uint8_t A, uint8_t line_w) {
+//    if (x0 + w > (uint32_t)bmp_info_header.width || y0 + h > (uint32_t)bmp_info_header.height) {
+//        throw std::runtime_error("The rectangle does not fit in the image!");
+//    }
+//
+//    fill_region(x0, y0, w, line_w, B, G, R, A);                                             // top line
+//    fill_region(x0, (y0 + h - line_w), w, line_w, B, G, R, A);                              // bottom line
+//    fill_region((x0 + w - line_w), (y0 + line_w), line_w, (h - (2 * line_w)), B, G, R, A);  // right line
+//    fill_region(x0, (y0 + line_w), line_w, (h - (2 * line_w)), B, G, R, A);                 // left line
+//}
 
 void BMP::write_headers(std::ofstream& of) {
     of.write((const char*)&file_header, sizeof(file_header));

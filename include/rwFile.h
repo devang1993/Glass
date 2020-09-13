@@ -9,6 +9,37 @@
 
 class BMP {
 public: 
+
+    BMP();
+    ~BMP();
+    
+    void read(const char* fname);
+
+    void newBMP(int32_t width, int32_t height, bool has_alpha = true);
+
+    void write(const char* fname);
+
+    void add_alpha(uint8_t alpha);
+
+    void overlay(const char* mask);
+
+    void alphaOverlay(std::vector<uint8_t>& background,std::vector<uint8_t>& mask, int i, int pos);
+    // set alpha chanel on mask for red threshold
+    void setAlpha();
+
+    void filter_channel(bool b, bool g, bool r);
+
+    void fill_region(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, std::vector<uint8_t>& BGR, bool newAlpha, uint8_t alpha);
+
+    void set_pixel(uint32_t x0, uint32_t y0, uint8_t B, uint8_t G, uint8_t R, uint8_t A);
+
+    //void draw_rectangle(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
+    //    uint8_t B, uint8_t G, uint8_t R, uint8_t A, uint8_t line_w);
+
+private:
+    uint32_t channels;
+    uint32_t redThreshold;
+
 #pragma pack(push, 1)
     struct BMPFileHeader {
         uint16_t file_type{ 0x4D42 };          // File type always BM which is 0x4D42 (stored as hex uint16_t in little endian)
@@ -48,32 +79,7 @@ public:
     BMPInfoHeader bmp_info_header;
     BMPColorHeader bmp_color_header;
     std::vector<uint8_t> data;
-    
-    BMP();
-    ~BMP();
-    
-    void read(const char* fname);
 
-    void newBMP(int32_t width, int32_t height, bool has_alpha = true);
-
-    void write(const char* fname);
-
-    void add_alpha(const char* fname, uint8_t alpha);
-
-    void overlay(const char* mask);
-
-    void bw();
-
-    void filter_channel(bool b, bool g, bool r);
-
-    void fill_region(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint8_t B, uint8_t G, uint8_t R, uint8_t A);
-
-    void set_pixel(uint32_t x0, uint32_t y0, uint8_t B, uint8_t G, uint8_t R, uint8_t A);
-
-    void draw_rectangle(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
-        uint8_t B, uint8_t G, uint8_t R, uint8_t A, uint8_t line_w);
-
-private:
     uint32_t row_stride{ 0 };
 
     void write_headers(std::ofstream& of);
