@@ -6,6 +6,7 @@
 #include<stdlib.h>
 #include<string>
 #include<filesystem>
+#include<random>
 
 #include"rwFile.h"
 

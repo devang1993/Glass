@@ -198,6 +198,9 @@ Glass_BINARY_DIR:STATIC=C:/Users/devan/source/repos/Glass/out/build/x64-Debug (d
 //Value Computed by CMake
 Glass_SOURCE_DIR:STATIC=C:/Users/devan/source/repos/Glass
 
+//The directory containing a CMake configuration file for OpenCV.
+OpenCV_DIR:PATH=C:/Users/devan/source/repos/vcpkg/installed/x64-windows/share/opencv
+
 //Automatically copy dependencies into the output directory for
 // executables.
 VCPKG_APPLOCAL_DEPS:BOOL=ON
@@ -346,6 +349,8 @@ CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 CMAKE_TOOLCHAIN_FILE-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_VERBOSE_MAKEFILE
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
+//Details about finding OpenCV
+FIND_PACKAGE_MESSAGE_DETAILS_OpenCV:INTERNAL=[C:/Users/devan/source/repos/vcpkg/installed/x64-windows][v4.1.1()]
 //ADVANCED property for variable: VCPKG_VERBOSE
 VCPKG_VERBOSE-ADVANCED:INTERNAL=1
 //Vcpkg root directory
