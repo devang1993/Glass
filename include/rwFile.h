@@ -14,6 +14,9 @@
 
 class BMP {
 public: 
+    int8_t redThreshold;
+    int8_t bwThreshold;
+    std::vector<uint8_t> data;
 
     BMP();
     ~BMP();
@@ -22,35 +25,38 @@ public:
 
     void newBMP(uint32_t width, uint32_t height, uint16_t bitSize);
 
+    void colour8bit();
+
+    void colour4bit();
+    
+    void colour1bit();
+    
+    void colourAvg();
+
     void write(const char* fname);
-
-    // view file on disk
-    void showImage(const char* fname, int readFlag);
-    // view file in memory
-    void showImage(char const* fname, cv::Mat image);
-
-    void colour2grey();
 
     void add_alpha(uint8_t alpha);
 
     void overlay(const char* mask);
 
-    void alphaOverlay(std::vector<uint8_t>& background,std::vector<uint8_t>& mask, uint32_t i, uint32_t pos);
+    void alphaOverlay(std::vector<uint8_t>& background, std::vector<uint8_t>& mask, uint32_t i, uint32_t pos);
     // set alpha chanel on mask for red threshold
     void setAlpha();
 
     void filter_channel(bool b, bool g, bool r);
 
-    void fill_region(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, std::vector<uint8_t>& BGR, uint8_t alpha, bool convert24to32);
+    // view file on disk
+    void showImage(const char* fname);
+    // view file in memory
+    void showImage(char const* fname, cv::Mat image);
 
-    void set_pixel(uint32_t x0, uint32_t y0, uint8_t B, uint8_t G, uint8_t R, uint8_t A);
 
     //void draw_rectangle(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
     //    uint8_t B, uint8_t G, uint8_t R, uint8_t A, uint8_t line_w);
 
 private:
     int8_t channels;
-    int8_t redThreshold;
+    int8_t inpChannels;
     
 #pragma pack(push, 1)
     typedef struct BMPFileHeader {
@@ -86,12 +92,12 @@ private:
         uint32_t unused[16]{ 0 };                // Unused data for sRGB color space
     };
 
-    //typedef struct RGBQUAD {
-    //    uint8_t rgbBlue{ 0 };
-    //    uint8_t rgbGreen{ 0 };
-    //    uint8_t rgbRed{ 0 };
-    //    uint8_t rgbReserved{ 0 };
-    //};
+    typedef struct RGBQUAD {
+        uint8_t rgbBlue{ 0 };
+        uint8_t rgbGreen{ 0 };
+        uint8_t rgbRed{ 0 };
+        uint8_t rgbReserved{ 0 };
+    };
 
     //typedef struct BMP8bitColourTable {
     //    RGBQUAD bmiColors[1];
@@ -102,21 +108,28 @@ private:
     BMPFileHeader file_header;
     BMPInfoHeader bmp_info_header;
     BMPColorHeader bmp_color_header;
-    //BMP8bitColourTable bmp_8bit_palette[256];
+    RGBQUAD bmp_8bit_table[256];
+    RGBQUAD bmp_4bit_table[16];
+    RGBQUAD bmp_1bit_table[2];
     
-    std::vector<uint8_t> data;
-    uint8_t colourTable[256 * 4] = { 0 };
 
     uint32_t row_stride{ 0 };
+    uint32_t new_stride{ 0 };
 
     void BMPFileParaReset();
+
+    void fill_region(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, std::vector<uint8_t>& BGR, uint8_t alpha, bool convert24to32);
+
+    void set_pixel(uint32_t x0, uint32_t y0, uint8_t B, uint8_t G, uint8_t R, uint8_t A);
+
+    void colourTable();
 
     void write_headers(std::ofstream& of);
 
     void write_headers_and_data(std::ofstream& of);
 
     // Add 1 to the row_stride until it is divisible with align_stride
-    uint32_t make_stride_aligned(uint32_t align_stride);
+    void make_stride_aligned();
 
     // Check if the pixel data is stored as BGRA and if the color space type is sRGB
     void check_color_header(BMPColorHeader& bmp_color_header);
