@@ -154,9 +154,10 @@ void BMP::read(const char* fname) {
             else {
                 row_stride = bmp_info_header.width / 8;
                 new_stride = 4 * ((row_stride * bmp_info_header.bit_count + 31) / 32);
-                std::vector<uint8_t>copyData(new_stride* bmp_info_header.height);
-                inp.read((char*)(copyData.data()), (new_stride * bmp_info_header.height));
-                data.resize(bmp_info_header.width * bmp_info_header.height / 8, 0);
+                //std::vector<uint8_t>copyData(new_stride* bmp_info_header.height);
+                data.resize(new_stride* bmp_info_header.height);
+                inp.read((char*)(data.data()), data.size());
+                //data.resize(bmp_info_header.width * bmp_info_header.height / 8, 0);
                 //for (int y = 0; y < bmp_info_header.height; ++y) {
                 //    for (int x = 0; x < row_stride; ++x) {
                 //        data[(y * row_stride) + x] = copyData[(y * new_stride) + x];
@@ -518,26 +519,58 @@ void BMP::overlay(const char* mask) {
     uint32_t x_offset = rand() % (bmp_info_header.width - readMask.bmp_info_header.width - 1);
     uint32_t y_offset = rand() % (bmp_info_header.height - readMask.bmp_info_header.height - 1);
     uint8_t alpha = 255;
-    if (channels == 3)
-        alpha = 0;
-    for (uint32_t y = y_offset; y < y_offset + readMask.bmp_info_header.height; y++) {
-        for (uint32_t x = x_offset; x < x_offset + readMask.bmp_info_header.width; x++) {
-            dataPos = channels * (y * bmp_info_header.width + x);
-            i = channels * ((y - y_offset) * readMask.bmp_info_header.width + (x - x_offset));;
-            if (channels == 1)
-                if(readMask.data[i] > redThreshold)
-                    data[dataPos] = readMask.data[i];
-            if(channels != 1) {
-                if (readMask.data[i] + readMask.data[(size_t)i + 1] + readMask.data[(size_t)i + 2] != 255 * 3) {
-                    if (channels == 4) {
-                        alphaOverlay(data, readMask.data, i, dataPos);
-                        alpha = readMask.data[(size_t)i + 3];
+    std::vector<uint8_t> classMap(data.size(), 0);
+    if (bmp_info_header.bit_count == 1) {
+        x_offset /= 8;
+        for (uint32_t y = y_offset; y < y_offset + readMask.bmp_info_header.height; ++y) {
+            for (uint32_t x = x_offset; x < x_offset + readMask.row_stride; ++x) {
+                dataPos = ((y * new_stride) + x);
+                i = (y - y_offset) * readMask.new_stride + (x - x_offset);
+                data[dataPos] |= readMask.data[i];
+                classMap[dataPos] |= readMask.data[i];
+            }
+        }
+    }
+    else {
+        if (channels == 3)
+            alpha = 0;
+        for (uint32_t y = y_offset; y < y_offset + readMask.bmp_info_header.height; y++) {
+            for (uint32_t x = x_offset; x < x_offset + readMask.bmp_info_header.width; x++) {
+                dataPos = channels * (y * bmp_info_header.width + x);
+                i = channels * ((y - y_offset) * readMask.bmp_info_header.width + (x - x_offset));
+                switch (bmp_info_header.bit_count) {
+
+                case 8: {
+                    if (readMask.data[i] > bwThreshold) {
+                        data[dataPos] = readMask.data[i];
+                        classMap[dataPos] = readMask.data[i];
                     }
-                    set_pixel(x, y, readMask.data[i + 0], readMask.data[(size_t)i + 1], readMask.data[(size_t)i + 2], alpha);
+                    break;
+                }
+
+                case 24:
+                case 32: {
+                    if (readMask.data[i] + readMask.data[(size_t)i + 1] + readMask.data[(size_t)i + 2] >= bwThreshold * 3) {
+                        if (channels == 4) {
+                            alphaOverlay(data, readMask.data, i, dataPos);
+                            alpha = readMask.data[(size_t)i + 3];
+                        }
+                        set_pixel(x, y, readMask.data[i + 0], readMask.data[(size_t)i + 1], readMask.data[(size_t)i + 2], alpha);
+                        classMap[dataPos] = readMask.data[i];
+                    }
+                    break;
+                }
+
+                default:
+                    throw std::runtime_error("Bit count not supported.");
                 }
             }
         }
     }
+    //std::ofstream classMapFile;
+    //classMapFile.open("classMapEx.txt", std::ios::out | std::ios::binary);
+    //classMapFile.write((char*)&classMap[0], classMap.size() * sizeof(uint8_t));
+    //classMapFile.close();
 }
 
 void BMP::alphaOverlay(std::vector<uint8_t>& background, std::vector<uint8_t>& mask, uint32_t i, uint32_t pos) {
@@ -552,14 +585,12 @@ void BMP::alphaOverlay(std::vector<uint8_t>& background, std::vector<uint8_t>& m
     mask[(size_t)i + 3] = alpha;
 }
 
-void BMP::setAlpha() {
+void BMP::setAlpha(uint8_t alpha) {
     if (channels != 4)
         throw std::runtime_error("Image does not have alpha");
     for (uint32_t i = 2; i < data.size(); i += 4) {
-        if (data[i] < redThreshold)
-            data[(size_t)i + 1] = 0;
-        else
-            data[(size_t)i + 1] = 255;
+        if (data[i] > redThreshold)
+            data[(size_t)i + 1] = alpha;
     }
 }
 

@@ -41,7 +41,7 @@ public:
 
     void alphaOverlay(std::vector<uint8_t>& background, std::vector<uint8_t>& mask, uint32_t i, uint32_t pos);
     // set alpha chanel on mask for red threshold
-    void setAlpha();
+    void setAlpha(uint8_t alpha);
 
     void filter_channel(bool b, bool g, bool r);
 

@@ -10,7 +10,7 @@ int main(int argc, char** argv)
 	{
 		std::cout << "================================================================================" << std::endl;
 		std::cout << "Program to convert images from 24 or 32 bit to 32, 24, 8, 4, 1 bit Bitmap images" << std::endl;
-		std::cout << "and to overlay a mask random items at random positions for specified iterations." << std::endl;
+		std::cout << "and to overlay a mask random times at random positions for specified iterations." << std::endl;
 		std::cout << "================================================================================" << std::endl;
 
 		// location of defect free image and mask image
@@ -259,43 +259,97 @@ int main(int argc, char** argv)
 			}
 				  // masking
 			case 3: {
-				BMP* BMPOp = new BMP();
-				BMPOp->redThreshold = 35;
-				BMPOp->read(maskImage);				// read mask image
-				BMPOp->add_alpha(0);				// add alpha channel to mask
-				BMPOp->setAlpha();					// set opacity to 0 in mask for insignificant pixels
-				BMPOp->colour1bit();				// convert colour to 8 bit grayscale
-				BMPOp->write(maskWAlpha);			// save mask image with alpha channel
-				BMPOp->read(defectFreeImage);		// read defect free image
-				BMPOp->add_alpha(255);				// add alpha channel to defect free image
-				BMPOp->colour1bit();				// convert colour to 8 bit grayscale
-				BMPOp->write(dfWAlpha);				// save defect free image with alpha channel
+				while (true) {
+					bool inpFlag = true;
+					int bitSelection = 0;
+					std::cout << std::endl;
+					std::cout << "			Test 1, 8, 24, 32 bit" << std::endl;
+					std::cout << std::endl;
+					std::cout << "			0. Go back:\t";
+					std::cin >> bitSelection;
+					if (bitSelection == 0)
+						break;
+					BMP* BMPOp = new BMP();
+					switch (bitSelection) {
 
-				srand(1);							// initialize seed to 1
-
-				std::cout << "Clearing directory..." << std::endl;			// clear directory of masked images
-				while (!std::filesystem::is_empty(maskedImageDir))
-					for (const auto& entry : std::filesystem::directory_iterator(maskedImageDir)) {
-						if (!std::filesystem::remove(entry.path(), error))
-							std::cout << error.message() << std::endl;
+					case 1: {
+						BMPOp->bwThreshold = 25;
+						BMPOp->read(maskImage);				// read mask image
+						BMPOp->colour1bit();				// convert colour to 1 bit bw
+						BMPOp->write(maskWAlpha);			// save mask image with alpha channel
+						BMPOp->read(defectFreeImage);		// read defect free image
+						BMPOp->colour1bit();				// convert colour to 1 bit bw
+						BMPOp->write(dfWAlpha);				// save defect free image with alpha channel
+						break;
 					}
-				if (!std::filesystem::exists(maskedImageDir))			// create directory for masked images if it does not exist
-					std::filesystem::create_directory(maskedImageDir);
 
-				std::cout << "Writing masked images..." << std::endl;		// start creating synthethic data
-				for (int iCount = 0; iCount < 1000; iCount++) {
-					int iMax = rand() % 5 + 1;							// maximum defects to create
-					BMPOp->read(dfWAlpha);								// read defect free image with alpha channel
-					synthethicImages = maskedImageDir + fileName + std::to_string(iCount + 1) + ".bmp";		// masked image file name and location
+					case 8: {
+						BMPOp->bwThreshold = 25;
+						BMPOp->read(maskImage);				// read mask image
+						BMPOp->colour8bit();				// convert colour to 8 bit grayscale
+						BMPOp->write(maskWAlpha);			// save mask image with alpha channel
+						BMPOp->read(defectFreeImage);		// read defect free image
+						BMPOp->colour8bit();				// convert colour to 8 bit grayscale
+						BMPOp->write(dfWAlpha);				// save defect free image with alpha channel
+						break;
+					}
 
-					for (int i = 0; i < iMax; i++)						// overlay random number of masks to defect free image at random positions
-						BMPOp->overlay(maskWAlpha);
+					case 24: {
+						BMPOp->bwThreshold = 70;
+						BMPOp->read(maskImage);				// read mask image
+						BMPOp->write(maskWAlpha);			// save mask image with alpha channel
+						BMPOp->read(defectFreeImage);		// read defect free image
+						BMPOp->write(dfWAlpha);				// save defect free image with alpha channel
+						break;
+					}
 
-					BMPOp->write(synthethicImages.c_str());				// save synthethic image
+					case 32: {
+						BMPOp->bwThreshold = 70;
+						BMPOp->redThreshold = 30;
+						BMPOp->read(maskImage);				// read mask image
+						BMPOp->add_alpha(0);				// add alpha channel to mask
+						BMPOp->setAlpha(150);					// set opacity to 0 in mask for insignificant pixels
+						BMPOp->write(maskWAlpha);			// save mask image with alpha channel
+						BMPOp->read(defectFreeImage);		// read defect free image
+						BMPOp->add_alpha(255);				// add alpha channel to defect free image
+						BMPOp->write(dfWAlpha);				// save defect free image with alpha channel
+						break;
+					}
+
+					default: {
+						std::cout << "Invalid input. Try again" << std::endl;
+						inpFlag = true;
+						continue;
+					}
+					
+					}
+
+					srand(1);							// initialize seed to 1
+					
+					std::cout << std::endl;
+					std::cout << "			Clearing directory..." << std::endl;			// clear directory of masked images
+					while (!std::filesystem::is_empty(maskedImageDir))
+						for (const auto& entry : std::filesystem::directory_iterator(maskedImageDir)) {
+							if (!std::filesystem::remove(entry.path(), error))
+								std::cout << error.message() << std::endl;
+						}
+					if (!std::filesystem::exists(maskedImageDir))			// create directory for masked images if it does not exist
+						std::filesystem::create_directory(maskedImageDir);
+
+					std::cout << "			Writing masked images..." << std::endl;		// start creating synthethic data
+					for (int iCount = 0; iCount < 1000; iCount++) {
+						int iMax = rand() % 5 + 1;							// maximum defects to create
+						BMPOp->read(dfWAlpha);								// read defect free image with alpha channel
+						synthethicImages = maskedImageDir + fileName + std::to_string(iCount + 1) + ".bmp";		// masked image file name and location
+
+						for (int i = 0; i < iMax; i++)						// overlay random number of masks to defect free image at random positions
+							BMPOp->overlay(maskWAlpha);
+
+						BMPOp->write(synthethicImages.c_str());				// save synthethic image
+					}
+					std::cout << "			Write success... " << std::endl;
+					delete(BMPOp);
 				}
-				std::cout << "Write success... " << std::endl;
-				std::cout << std::endl;
-				delete(BMPOp);
 				break;
 			}
 				  // Invalid input
