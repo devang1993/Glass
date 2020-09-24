@@ -11,11 +11,9 @@
 *.sln.docstates
 
 /images/maskedImages
-/images/maskedImages3
 
 # CMake
 /out
-/out1
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
