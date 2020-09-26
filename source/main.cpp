@@ -1,4 +1,4 @@
-#include"glass.h"
+#include"glass.hpp"
 
 std::vector<std::string> files;
 
@@ -22,7 +22,7 @@ int main(int argc, char** argv)
 			* maskedImageDir = "../../../images/maskedImages/",
 			* sample8bit = "../../../images/greyImages/df24to8.bmp",
 			* sample4bit = "../../../images/greyImages/df24to4.bmp",
-			* sample1bit = "../../../images/greyImages/bw.bmp",
+			* sample1bit = "../../../images/greyImages/df24to1.bmp",
 			* testImage = "../../../images/testImage.bmp",
 			// glass defect directory
 			* petraGlass101Dir = "../../../images/defectImages/petraGlass1/petraGlass1_0.1",
@@ -109,6 +109,7 @@ int main(int argc, char** argv)
 						BMPOp->colour4bit();		// test 4 bit
 						break;
 					case 8:
+						BMPOp->bwThreshold = 20;
 						BMPOp->colour8bit();		// test 8 bit
 						break;
 					case 24:
@@ -179,27 +180,40 @@ int main(int argc, char** argv)
 							BMPOp->read((char*)files[i].c_str());
 							switch (bitSelection) {
 							case 8:
+								BMPOp->bwThreshold = 20;
 								BMPOp->colour8bit();
 								break;
 							case 1:
+								BMPOp->bwThreshold = 20;
 								BMPOp->colour1bit();
 								break;
 							}
 							img[i] = new BMP(*BMPOp);
 						}
 						BMPOp->data.clear();
-						if (bitSelection == 1) {
+						switch (bitSelection) {
+						case 1: {
 							BMPOp->data.resize(img[0]->data.size(), 0xFF);
 							for (int i = 0; i < BMPOp->data.size(); i++)
 								for (int j = 0; j < img.size(); j++)
 									BMPOp->data[i] &= img[j]->data[i];
 							BMPOp->write(maskWAlpha);
+							break;
 						}
-						else {
+						case 8: {
+							//BMPOp->data.resize(img[0]->data.size(), 0xFF);
+							//for (int i = 0; i < BMPOp->data.size(); i++)
+							//	for (int j = 0; j < img.size(); j++)
+							//		BMPOp->data[i] &= img[j]->data[i];
+							//BMPOp->write(maskWAlpha);
+							//break;
+						}
+						case 24:
+						case 32: {
 							BMPOp->data.resize(img[0]->data.size());
 							for (int i = 0; i < BMPOp->data.size(); i++) {
 								uint8_t new_size = (uint8_t)img.size();
-								float mean = 0, sigma = 0.0f, new_mean = 0;
+								float mean = 0.0f, sigma = 0.0f, new_mean = 0.0f;
 								for (int j = 0; j < img.size(); j++)
 									mean += img[j]->data[i] / img.size();
 								for (int j = 0; j < img.size(); j++)
@@ -216,37 +230,39 @@ int main(int argc, char** argv)
 									BMPOp->data[i] = 0;
 							}
 							BMPOp->write(maskWAlpha);
-							if (bitSelection != 1) {
-								do {
-									switch (bitSelection) {
-									case 24:
-										std::cout << std::endl;
-										std::cout << "			Convert to 1 or 8 bit? 0 for no:\t";
-										break;
-									case 8:
-										std::cout << std::endl;
-										std::cout << "			Convert to 1 bit? 0 for no:\t";
-										break;
-									}
-									std::cin >> bitSelection;
-									switch (bitSelection) {
-									case 1:
-										BMPOp->bwThreshold = 25;
-										BMPOp->colour1bit();
-										break;
-									case 8:
-										BMPOp->colour8bit();
-										break;
-									case 0:
-										break;
-									default:
-										std::cout << "Invalid input. Try again." << std::endl;
-										continue;
-									}
-								} while (bitSelection != 1 && bitSelection != 8 && bitSelection != 0);
-								if (bitSelection != 0)
-									BMPOp->write(maskWAlpha);
-							}
+							break;
+						}
+						}
+						if (bitSelection != 1) {
+							do {
+								switch (bitSelection) {
+								case 24:
+									std::cout << std::endl;
+									std::cout << "			Convert to 1 or 8 bit? 0 for no:\t";
+									break;
+								case 8:
+									std::cout << std::endl;
+									std::cout << "			Convert to 1 bit? 0 for no:\t";
+									break;
+								}
+								std::cin >> bitSelection;
+								switch (bitSelection) {
+								case 1:
+									BMPOp->bwThreshold = 25;
+									BMPOp->colour1bit();
+									break;
+								case 8:
+									BMPOp->colour8bit();
+									break;
+								case 0:
+									break;
+								default:
+									std::cout << "Invalid input. Try again." << std::endl;
+									continue;
+								}
+							} while (bitSelection != 1 && bitSelection != 8 && bitSelection != 0);
+							if (bitSelection != 0)
+								BMPOp->write(maskWAlpha);
 						}
 						for (int i = 0; i < files.size(); i++)
 							delete (img[i]);

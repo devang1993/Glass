@@ -1,5 +1,5 @@
-#ifndef __RWFILE_H__
-#define __RWFILE_H__
+#ifndef __RWFILE_HPP__
+#define __RWFILE_HPP__
 
 #pragma once
 #include <fstream>
@@ -7,10 +7,10 @@
 #include <stdexcept>
 #include <iostream>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include<opencv2/imgproc/imgproc.hpp>
+//#include <opencv2/core/core.hpp>
+//#include <opencv2/imgcodecs.hpp>
+//#include <opencv2/highgui/highgui.hpp>
+//#include <opencv2/imgproc/imgproc.hpp>
 
 class BMP {
 public: 
@@ -45,11 +45,10 @@ public:
 
     void filter_channel(bool b, bool g, bool r);
 
-    // view file on disk
-    void showImage(const char* fname);
-    // view file in memory
-    void showImage(char const* fname, cv::Mat image);
-
+    //// view file on disk
+    //void showImage(const char* fname);
+    //// view file in memory
+    //void showImage(char const* fname, cv::Mat image);
 
     //void draw_rectangle(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
     //    uint8_t B, uint8_t G, uint8_t R, uint8_t A, uint8_t line_w);
@@ -59,7 +58,7 @@ private:
     int8_t inpChannels;
     
 #pragma pack(push, 1)
-    typedef struct BMPFileHeader {
+    struct BMPFileHeader {
         uint16_t file_type{ 0x4D42 };          // File type always BM which is 0x4D42 (stored as hex uint16_t in little endian)
         uint32_t file_size{ 0 };               // Size of the file (in bytes)
         uint16_t reserved1{ 0 };               // Reserved, always 0
@@ -67,7 +66,7 @@ private:
         uint32_t offset_data{ 0 };             // Start position of pixel data (bytes from the beginning of the file)
     };
 
-    typedef struct BMPInfoHeader {
+    struct BMPInfoHeader {
         uint32_t size{ 0 };                      // Size of this header (in bytes)
         int32_t width{ 0 };                      // width of bitmap in pixels
         int32_t height{ 0 };                     // width of bitmap in pixels
@@ -83,7 +82,7 @@ private:
         uint32_t colors_important{ 0 };          // No. of colors used for displaying the bitmap. If 0 all colors are required
     };
 
-    typedef struct BMPColorHeader {
+    struct BMPColorHeader {
         uint32_t red_mask{ 0x00ff0000 };         // Bit mask for the red channel
         uint32_t green_mask{ 0x0000ff00 };       // Bit mask for the green channel
         uint32_t blue_mask{ 0x000000ff };        // Bit mask for the blue channel
@@ -92,7 +91,7 @@ private:
         uint32_t unused[16]{ 0 };                // Unused data for sRGB color space
     };
 
-    typedef struct RGBQUAD {
+    struct RGBQUAD {
         uint8_t rgbBlue{ 0 };
         uint8_t rgbGreen{ 0 };
         uint8_t rgbRed{ 0 };
@@ -112,9 +111,10 @@ private:
     RGBQUAD bmp_4bit_table[16];
     RGBQUAD bmp_1bit_table[2];
     
-
     uint32_t row_stride{ 0 };
     uint32_t new_stride{ 0 };
+
+    std::vector<uint8_t> padding_row;
 
     void BMPFileParaReset();
 

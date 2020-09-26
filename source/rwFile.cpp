@@ -1,4 +1,4 @@
-#include "rwFile.h"
+#include "rwFile.hpp"
 
 BMP::BMP() {
     channels = 0;
@@ -114,7 +114,7 @@ void BMP::read(const char* fname) {
             else {
                 row_stride = bmp_info_header.width * channels;
                 make_stride_aligned();
-                std::vector<uint8_t> padding_row(new_stride - row_stride);
+                padding_row.resize(new_stride - row_stride);
 
                 for (int y = 0; y < bmp_info_header.height; ++y) {
                     inp.read((char*)(data.data() + (size_t)row_stride * y), row_stride);
@@ -134,7 +134,7 @@ void BMP::read(const char* fname) {
             else {
                 row_stride = bmp_info_header.width;
                 make_stride_aligned();
-                std::vector<uint8_t> padding_row(new_stride - row_stride);
+                padding_row.resize(new_stride - row_stride);
 
                 for (int y = 0; y < bmp_info_header.height; ++y) {
                     inp.read((char*)(data.data() + (size_t)row_stride * y), row_stride);
@@ -314,6 +314,9 @@ void BMP::colour8bit() {
         //std::vector<uint8_t> copyData(data);
         newBMP(bmp_info_header.width, bmp_info_header.height, 8);
         colourAvg();
+        //for (int i = 0; i < data.size(); i += inpChannels)
+        //    data[i / inpChannels] = ((((data[i] * 21) + (data[i + 1] * 72) + (data[i + 2] * 7)) / 100) < bwThreshold) ? 0 : 255;
+        //data.resize(data.size() / inpChannels);
     }
     else
         std::cout << "Select 24 bit or 32 bit image" << std::endl;
@@ -337,36 +340,9 @@ void BMP::colour4bit() {
         for (int y = 0; y < bmp_info_header.height; y++) {
             oldPos = y * bmp_info_header.width;
             newPos = y * new_stride;
-            //switch (bmp_info_header.width % 8) {
-            //case 0: {
-            //    for (int x = 0; x < row_stride; x++)
-            //        data[newPos + x] = (copyData[oldPos + x] & 0x0F << 4) | copyData[oldPos + x + 1] & 0x0F;
-            //    break;
-            //}
-            //case 1:{
-            //    for (int x = 0; x < row_stride - 1; x++)
-            //        data[newPos + x] = (copyData[oldPos + x] & 0x0F << 4) | copyData[oldPos + x + 1] & 0x0F;
-            //    data[newPos + row_stride] = (copyData[oldPos + row_stride] & 0x0F) << 4;
-            //    data[newPos + row_stride + 1] = data[newPos + row_stride + 2] = 0;
-            //    break;
-            //}
-            //case 2: {
-            //    for (int x = 0; x < row_stride; x++)
-            //        data[newPos + x] = (copyData[oldPos + x] & 0x0F << 4) | copyData[oldPos + x + 1] & 0x0F;
-            //    data[newPos + row_stride + 1] = data[newPos + row_stride + 2] = 0;
-            //    break;
-            //}
-            //case 3: {
-            //    for (int x = 0; x < row_stride-1; x++)
-            //        data[newPos + x] = (copyData[oldPos + x] & 0x0F << 4) | copyData[oldPos + x + 1] & 0x0F;
-            //    data[newPos + row_stride] = (copyData[oldPos + row_stride] & 0x0F) << 4;
-            //    break;
-            //}
-            //
-            //}
             
-            for (int x = 0; x < bmp_info_header.width / 2; x++)
-                data[newPos + x] = ((copyData[oldPos + x] & 0x0F) << 4) | (copyData[oldPos + x + 1] & 0x0F);
+            for (int x = 0; x < (bmp_info_header.width - (bmp_info_header.width % 2)); x += 2)
+                data[newPos + (x / 2)] = ((copyData[oldPos + x] & 0x0F) << 4) | (copyData[oldPos + x + 1] & 0x0F);
             switch (bmp_info_header.width % 2) {
             case 0: {
                 for (int i = 0; i < row_stride - (bmp_info_header.width / 2); i++)
@@ -375,27 +351,12 @@ void BMP::colour4bit() {
             }
 
             case 1: {
-                data[newPos + bmp_info_header.width / 2] = (copyData[oldPos + row_stride] & 0x0F) << 4;
+                data[newPos + bmp_info_header.width / 2] = (copyData[oldPos + bmp_info_header.width - 1] & 0x0F) << 4;
                 for (int i = 1; i < new_stride - (bmp_info_header.width / 2); i++)
                     data[newPos + bmp_info_header.width / 2 + i] = 0;
                 break;
             }
             }
-
-            //if (row_stride % 2 == 0) {
-            //    for (int x = 0; x < row_stride; x++)
-            //        data[newPos + x] = (copyData[oldPos + x] & 0x0F << 4) | copyData[oldPos + x + 1] & 0x0F;
-            //    if (row_stride % 4 != 0)
-            //        for (int i = 0; i < (new_stride - row_stride); i++)
-            //            data[newPos + row_stride + i] = 0;
-            //}
-            //else {
-            //    for (int x = 0; x < row_stride - 1; x++)
-            //        data[newPos + x] = (copyData[oldPos + x] & 0x0F << 4) | copyData[oldPos + x + 1] & 0x0F;
-            //    data[newPos + row_stride] = (copyData[oldPos + row_stride] & 0x0F) << 4;
-            //    for (int i = 0; i < (new_stride - row_stride); i++)
-            //        data[newPos + row_stride + 1] = 0;
-            //}
         }
     }
     else
@@ -404,20 +365,26 @@ void BMP::colour4bit() {
 
 void BMP::colour1bit() {
     if (bmp_info_header.bit_count > 7) {
-        inpChannels = channels;
-        if (inpChannels != 1)
-            colourAvg();
+        if (bmp_info_header.bit_count > 8)
+            inpChannels = channels;
+        else
+            inpChannels = 1;
+        //if (inpChannels != 1)
+        //    colourAvg();
         newBMP(bmp_info_header.width, bmp_info_header.height, 1);
         std::vector<uint8_t> copyData(data);
         data.clear();   
         data.resize(new_stride * bmp_info_header.height);
        
         //**//**//**
+        int pos = 0, dataPos = 0; 
         for (int y = 0; y < bmp_info_header.height; y++) {
+            pos = y * bmp_info_header.width;
             for (int x = 0; x < bmp_info_header.width; x += 8) {
-                for (int i = 0; (i < 8) && ((x + i) < bmp_info_header.width); i++) {
+                for (int i = 0; (i < 8) && (inpChannels * (x + i) + 2 < inpChannels * bmp_info_header.width); i++) {
+                    dataPos = inpChannels * (pos + x + i);
                     data[(y * row_stride) + (x / 8)] |=
-                        (((copyData[(y * bmp_info_header.width) + x + i] < bwThreshold) ? 0 : 1) << (7 - i));
+                        (((((copyData[dataPos] * 21) + (copyData[dataPos + 1] * 72) + (copyData[dataPos + 2] * 7)) / 100 < bwThreshold) ? 0 : 1) << (7 - i));
                 }
             }
             if (row_stride - (bmp_info_header.width / 8) != 0) 
@@ -460,7 +427,7 @@ void BMP::write(const char* fname) {
                 write_headers_and_data(of);
             else {
                 make_stride_aligned();
-                std::vector<uint8_t> padding_row(new_stride - row_stride);
+                padding_row.resize(new_stride - row_stride);
                 write_headers(of);
                 for (int y = 0; y < bmp_info_header.height; ++y) {
                     of.write((const char*)(data.data() + (size_t)row_stride * y), row_stride);
@@ -480,7 +447,7 @@ void BMP::write(const char* fname) {
                 write_headers_and_data(of);
             else {
                 make_stride_aligned();
-                std::vector<uint8_t> padding_row(new_stride - row_stride);
+                padding_row.resize(new_stride - row_stride);
                 write_headers(of);
                 for (int y = 0; y < bmp_info_header.height; ++y) {
                     of.write((const char*)(data.data() + (size_t)row_stride * y), row_stride);
@@ -557,6 +524,8 @@ void BMP::overlay(const char* mask) {
                         }
                         set_pixel(x, y, readMask.data[i + 0], readMask.data[(size_t)i + 1], readMask.data[(size_t)i + 2], alpha);
                         classMap[dataPos] = readMask.data[i];
+                        classMap[dataPos + 1] = readMask.data[i];
+                        classMap[dataPos + 2] = readMask.data[i];
                     }
                     break;
                 }
@@ -758,16 +727,18 @@ void BMP::check_color_header(BMPColorHeader& bmp_color_header) {
     }
 }
 
-void BMP::showImage(const char* fname) {
-    cv::Mat image;
-    image = cv::imread(fname, cv::IMREAD_ANYCOLOR);
-    cv::namedWindow(fname, cv::WINDOW_AUTOSIZE);
-    cv::imshow(fname, image);
-    cv::waitKey();
-}
+// openCV view image and convert
 
-void BMP::showImage(char const* fname, cv::Mat image) {
-    cv::namedWindow(fname, cv::WINDOW_AUTOSIZE);
-    cv::imshow(fname, image);
-    cv::waitKey();
-}
+//void BMP::showImage(const char* fname) {
+//    cv::Mat image;
+//    image = cv::imread(fname, cv::IMREAD_ANYCOLOR);
+//    cv::namedWindow(fname, cv::WINDOW_AUTOSIZE);
+//    cv::imshow(fname, image);
+//    cv::waitKey();
+//}
+//
+//void BMP::showImage(char const* fname, cv::Mat image) {
+//    cv::namedWindow(fname, cv::WINDOW_AUTOSIZE);
+//    cv::imshow(fname, image);
+//    cv::waitKey();
+//}

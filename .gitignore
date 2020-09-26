@@ -10,10 +10,10 @@
 *.userosscache
 *.sln.docstates
 
-/images/maskedImages
+#/images/maskedImages
 
 # CMake
-/out
+#/out
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
