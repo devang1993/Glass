@@ -1,8 +1,6 @@
 #include"glass.hpp"
 
-std::vector<std::string> files;
-
-void fileList(const char* defectDir);
+void fileList(const char* defectDir, std::vector<std::string>& files);
 
 int main(int argc, char** argv)
 {
@@ -77,23 +75,19 @@ int main(int argc, char** argv)
 					std::cout << "			4. sample1bit," << std::endl;
 					std::cout << "			5. defectFreeImage," << std::endl;
 					std::cout << "			6. testImage," << std::endl;
-					std::cout << "			7 - " << (sizeof(file) / sizeof(file[0])) + files.size() << ". files," << std::endl;
 					std::cout << std::endl;
 					std::cout << "			0. Go back\t\t";
 					std::cin >> user_in;
 
 					if (user_in == 0)
 						break;
-					if (0 > user_in || user_in > (sizeof(file) / sizeof(file[0]) + files.size())) {
+					if (0 > user_in || user_in > (sizeof(file) / sizeof(file[0]) )) {
 						std::cout << "Invalid selection. Try again." << std::endl;
 						continue;
 					}
 
 					BMP* BMPOp = new BMP();
-					if ((user_in - 1) < sizeof(file) / sizeof(file[0]))
-						BMPOp->read(file[user_in - 1]);
-					else
-						BMPOp->read((char*)files[user_in - (sizeof(file) / sizeof(file[0]))].c_str());
+					BMPOp->read(file[user_in - 1]);
 					std::cout << std::endl;
 					std::cout << "			Test 1, 4, 8, 24, 32 bit:\t";
 					std::cin >> bitSelection;
@@ -113,7 +107,6 @@ int main(int argc, char** argv)
 						BMPOp->colour8bit();		// test 8 bit
 						break;
 					case 24:
-						BMPOp->write(maskWAlpha);
 						break;
 					case 32:
 						BMPOp->add_alpha(0);		// test 32 bit
@@ -144,24 +137,25 @@ int main(int argc, char** argv)
 					std::cout << std::endl;
 					std::cout << "			0. Go back\t";
 					std::cin >> defectType;
+					std::vector<std::string> files;
 					switch (defectType) {
 					case 0:
 						runFlag2 = false;
 						break;
 					case 1:
-						fileList(petraGlass101Dir);
+						fileList(petraGlass101Dir, files);
 						break;
 					case 2:
-						fileList(petraGlass2Dir);
+						fileList(petraGlass2Dir, files);
 						break;
 					case 3:
-						fileList(petraGlass3_S1Dir);
+						fileList(petraGlass3_S1Dir, files);
 						break;
 					case 4:
-						fileList(petraGlass3_S2Dir);
+						fileList(petraGlass3_S2Dir, files);
 						break;
 					case 5:
-						fileList(petraGlass6Dir);
+						fileList(petraGlass6Dir, files);
 						break;
 					default:
 						std::cout << "Invalid input. Try again" << std::endl;
@@ -385,7 +379,7 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-void fileList(const char* defectDir) {
+void fileList(const char* defectDir, std::vector<std::string>& files) {
 	files.clear();
 	for (const auto& entry : std::filesystem::directory_iterator(defectDir)) {
 		if (!entry.is_directory())
