@@ -27,7 +27,10 @@ int main(int argc, char** argv)
 			* petraGlass2Dir = "../../../images/defectImages/petraGlass2",
 			* petraGlass3_S1Dir = "../../../images/defectImages/petraGlass3/petraGlass3_S1",
 			* petraGlass3_S2Dir = "../../../images/defectImages/petraGlass3/petraGlass3_S2",
+			* petraGlass4Dir = "../../../images/defectImages/petraGlass4",
+			* petraGlass5Dir = "../../../images/defectImages/petraGlass5",
 			* petraGlass6Dir = "../../../images/defectImages/petraGlass6",
+			* petraGlass6PADir = "../../../images/defectImages/petraGlass6/polarized",
 			// array of files list for selection
 			* file[] = {
 			maskImage,
@@ -82,7 +85,7 @@ int main(int argc, char** argv)
 					if (user_in == 0)
 						break;
 					if (0 > user_in || user_in > (sizeof(file) / sizeof(file[0]) )) {
-						std::cout << "Invalid selection. Try again." << std::endl;
+						std::cout << "			Invalid selection. Try again." << std::endl;
 						continue;
 					}
 
@@ -112,7 +115,7 @@ int main(int argc, char** argv)
 						BMPOp->add_alpha(0);		// test 32 bit
 						break;
 					default:
-						std::cout << "Invalid bit size. Try again" << std::endl;
+						std::cout << "			Invalid bit size. Try again" << std::endl;
 						break;
 					}
 					BMPOp->write(maskWAlpha);
@@ -124,7 +127,7 @@ int main(int argc, char** argv)
 				// Temporal Averaging
 			case 2: {
 				bool runFlag2 = true, inpFlag = true;
-				while (runFlag2) {
+				do {
 					inpFlag = true;
 					int defectType = 0;
 					std::cout << std::endl;
@@ -133,42 +136,68 @@ int main(int argc, char** argv)
 					std::cout << "			2. Petra Glass 2," << std::endl;
 					std::cout << "			3. Petra Glass 3 S1," << std::endl;
 					std::cout << "			4. Petra Glass 3 S2," << std::endl;
-					std::cout << "			5. Petra Glass 6," << std::endl;
+					std::cout << "			5. Petra Glass 4," << std::endl;
+					std::cout << "			6. Petra Glass 5," << std::endl;
+					std::cout << "			7. Petra Glass 6," << std::endl;
+					std::cout << "			8. Petra Glass 6 PA," << std::endl;
 					std::cout << std::endl;
 					std::cout << "			0. Go back\t";
 					std::cin >> defectType;
-					std::vector<std::string> files;
 					switch (defectType) {
-					case 0:
+					case 0: {
 						runFlag2 = false;
 						break;
+					}
 					case 1:
-						fileList(petraGlass101Dir, files);
 						break;
 					case 2:
-						fileList(petraGlass2Dir, files);
 						break;
 					case 3:
-						fileList(petraGlass3_S1Dir, files);
 						break;
 					case 4:
-						fileList(petraGlass3_S2Dir, files);
 						break;
 					case 5:
-						fileList(petraGlass6Dir, files);
+						break;
+					case 6:
+						break;
+					case 7:
+						break;
+					case 8:
 						break;
 					default:
-						std::cout << "Invalid input. Try again" << std::endl;
-						inpFlag = false;
-						break;
+						std::cout << "			Invalid input. Try again" << std::endl;
+						continue;
 					}
+					std::vector<std::string> files;
+					const char* fileDir[] = {
+						petraGlass101Dir,
+						petraGlass2Dir,
+						petraGlass3_S1Dir,
+						petraGlass3_S2Dir,
+						petraGlass4Dir,
+						petraGlass5Dir,
+						petraGlass6Dir,
+						petraGlass6PADir };
 					while (inpFlag && runFlag2) {
+						fileList(fileDir[defectType - 1], files);
 						BMP* BMPOp = new BMP();
 						std::vector<BMP*> img;
 						int bitSelection = 0;
 						std::cout << std::endl;
 						std::cout << "			Use as 1, 8, or 24 bit:\t";
 						std::cin >> bitSelection;
+						switch (bitSelection)
+						{
+						case 1:
+							break;
+						case 8:
+							break;
+						case 24:
+							break;
+						default:
+							std::cout << "			Invalid input. Try again." << std::endl;
+							continue;
+						}
 						img.resize(files.size());
 						for (int i = 0; i < files.size(); i++) {
 							BMPOp->read((char*)files[i].c_str());
@@ -251,7 +280,7 @@ int main(int argc, char** argv)
 								case 0:
 									break;
 								default:
-									std::cout << "Invalid input. Try again." << std::endl;
+									std::cout << "			Invalid input. Try again." << std::endl;
 									continue;
 								}
 							} while (bitSelection != 1 && bitSelection != 8 && bitSelection != 0);
@@ -264,21 +293,23 @@ int main(int argc, char** argv)
 						delete(BMPOp);
 						break;
 					} // end while
-				}
+				} while (runFlag2);
 				break;
 			}
 				  // masking
 			case 3: {
-				while (true) {
-					bool inpFlag = true;
+				bool runFlag2 = true, inpFlag = true;
+				do {
 					int bitSelection = 0;
 					std::cout << std::endl;
 					std::cout << "			Test 1, 8, 24, 32 bit" << std::endl;
 					std::cout << std::endl;
 					std::cout << "			0. Go back:\t";
 					std::cin >> bitSelection;
-					if (bitSelection == 0)
+					if (bitSelection == 0) {
+						runFlag2 = false;
 						break;
+					}
 					BMP* BMPOp = new BMP();
 					switch (bitSelection) {
 
@@ -327,7 +358,7 @@ int main(int argc, char** argv)
 					}
 
 					default: {
-						std::cout << "Invalid input. Try again" << std::endl;
+						std::cout << "			Invalid input. Try again" << std::endl;
 						inpFlag = true;
 						continue;
 					}
@@ -359,7 +390,7 @@ int main(int argc, char** argv)
 					}
 					std::cout << "			Write success... " << std::endl;
 					delete(BMPOp);
-				}
+				} while (runFlag2);
 				break;
 			}
 				  // Invalid input
