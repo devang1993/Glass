@@ -238,7 +238,7 @@ void BMP::newBMP(uint32_t width, uint32_t height, uint16_t bitSize) {
     case 32: {
         bmp_info_header.bit_count = 32;
         channels = 4;
-        row_stride = width * channels;
+        rowStride(bmp_info_header.bit_count);
         data.resize((size_t)row_stride * height);
         bmp_info_header.size += sizeof(BMPColorHeader);
         file_header.offset_data += sizeof(BMPColorHeader);
@@ -250,7 +250,7 @@ void BMP::newBMP(uint32_t width, uint32_t height, uint16_t bitSize) {
     case 24: {
         bmp_info_header.bit_count = 24;
         channels = 3;
-        row_stride = width * channels;
+        rowStride(bmp_info_header.bit_count);
         data.resize((size_t)row_stride * height);
         file_header.file_size = file_header.offset_data + (uint32_t)data.size();
         make_stride_aligned();
@@ -262,7 +262,7 @@ void BMP::newBMP(uint32_t width, uint32_t height, uint16_t bitSize) {
     case  8: {
         bmp_info_header.bit_count = 8;
         channels = 1;
-        row_stride = width * channels;
+        rowStride(bmp_info_header.bit_count);
         colourTable();
         file_header.offset_data += sizeof(bmp_8bit_table);
         file_header.file_size = file_header.offset_data + (row_stride* height);
@@ -275,7 +275,7 @@ void BMP::newBMP(uint32_t width, uint32_t height, uint16_t bitSize) {
     case  4: {
         bmp_info_header.width = width;
         bmp_info_header.bit_count = 4;
-        row_stride =  4 * ((width * bmp_info_header.bit_count + 31) / 32);
+        rowStride(bmp_info_header.bit_count);
         colourTable();
         file_header.offset_data += sizeof(bmp_4bit_table);
         file_header.file_size = file_header.offset_data + (uint32_t)(row_stride * height);
@@ -290,7 +290,7 @@ void BMP::newBMP(uint32_t width, uint32_t height, uint16_t bitSize) {
     
     case  1: {
         bmp_info_header.bit_count = 1;
-        row_stride = 4 * ((width * bmp_info_header.bit_count + 31) / 32);
+        rowStride(bmp_info_header.bit_count);
         colourTable();
         file_header.offset_data += sizeof(bmp_1bit_table);
         file_header.file_size = file_header.offset_data + (row_stride * height);
@@ -313,10 +313,15 @@ void BMP::colour8bit() {
         inpChannels = channels;
         //std::vector<uint8_t> copyData(data);
         newBMP(bmp_info_header.width, bmp_info_header.height, 8);
-        colourAvg();
-        //for (int i = 0; i < data.size(); i += inpChannels)
-        //    data[i / inpChannels] = ((((data[i] * 21) + (data[i + 1] * 72) + (data[i + 2] * 7)) / 100) < bwThreshold) ? 0 : 255;
-        //data.resize(data.size() / inpChannels);
+        //colourAvg();
+        for (int i = 0; i < data.size(); i += inpChannels) {
+            data[i / inpChannels] = ((((data[i] * 21) + (data[i + 1] * 72) + (data[i + 2] * 7)) / 100) < bwThreshold) ? 0 : 255;
+            if (data[i / inpChannels] < bwThreshold)
+                data[i / inpChannels] = 0;
+            else
+                data[i / inpChannels] = 255;
+        }
+        data.resize(data.size() / inpChannels);
     }
     else
         std::cout << "Select 24 bit or 32 bit image" << std::endl;
@@ -468,6 +473,30 @@ void BMP::write(const char* fname) {
         throw std::runtime_error("Unable to open the output image file.");
 }
 
+void BMP::blob(uint8_t blobMaskSize) {
+    std::vector<uint8_t> copyData(data);
+    uint8_t blob, blobSur;
+    for (int y = 0; y < (bmp_info_header.height - (blobMaskSize - 1)); y++) {
+        for (int x = 0; x < (bmp_info_header.width - (blobMaskSize - 1)); x++) {
+            blob = 0;
+            blobSur = 0;
+            for (int n = 0; n < blobMaskSize && (blobSur == 0); n++) {
+                for (int m = 0; (m < blobMaskSize) && (blobSur == 0); m++) {
+                    if ((n < 1) || (n > (blobMaskSize - 2)) || (m < 1) || (m > (blobMaskSize - 2))) // check surrounding blob for 0
+                        blobSur |= data[((y + n) * bmp_info_header.width) + (x + m)];
+                    else // check blob
+                        blob |= data[((y + n) * bmp_info_header.width) + (x + m)];
+                }
+            }
+            if ((blobSur == 0) && (blob == 0xFF))
+                for (int n = 1; n < blobMaskSize; n++)
+                    for (int m = 1; m < blobMaskSize; m++)
+                        copyData[((y + n) * bmp_info_header.width) + (x + m)] = 0;
+        }
+    }
+    data = copyData;
+}
+
 void BMP::add_alpha(uint8_t alpha) {
     if (channels != 3)
         throw std::runtime_error("24 bit image required to give alpha");
@@ -478,54 +507,53 @@ void BMP::add_alpha(uint8_t alpha) {
     }
 }
 
-void BMP::overlay(const char* mask) {
-    BMP readMask;
-    readMask.read(mask);
+void BMP::overlay(BMP* readMask) {
     uint32_t i = 0;
     uint32_t dataPos = 0;
-    uint32_t x_offset = rand() % (bmp_info_header.width - readMask.bmp_info_header.width - 1);
-    uint32_t y_offset = rand() % (bmp_info_header.height - readMask.bmp_info_header.height - 1);
+    uint32_t x_offset = rand() % (bmp_info_header.width - readMask->bmp_info_header.width - 1);
+    uint32_t y_offset = rand() % (bmp_info_header.height - readMask->bmp_info_header.height - 1);
     uint8_t alpha = 255;
-    std::vector<uint8_t> classMap(data.size(), 0);
+    BMP* ann = new BMP();
+    ann->bmp_info_header.bit_count = 1;
+    ann->bmp_info_header.width = bmp_info_header.width;
+    ann->make_stride_aligned();
+    classMap.resize(ann->new_stride * bmp_info_header.height, 0);
+    delete(ann);
     if (bmp_info_header.bit_count == 1) {
         x_offset /= 8;
-        for (uint32_t y = y_offset; y < y_offset + readMask.bmp_info_header.height; ++y) {
-            for (uint32_t x = x_offset; x < x_offset + readMask.row_stride; ++x) {
+        for (uint32_t y = y_offset; y < y_offset + readMask->bmp_info_header.height; ++y) {
+            for (uint32_t x = x_offset; x < x_offset + readMask->row_stride; ++x) {
                 dataPos = ((y * new_stride) + x);
-                i = (y - y_offset) * readMask.new_stride + (x - x_offset);
-                data[dataPos] |= readMask.data[i];
-                classMap[dataPos] |= readMask.data[i];
+                i = (y - y_offset) * readMask->new_stride + (x - x_offset);
+                data[dataPos] |= readMask->data[i];
             }
         }
     }
     else {
         if (channels == 3)
             alpha = 0;
-        for (uint32_t y = y_offset; y < y_offset + readMask.bmp_info_header.height; y++) {
-            for (uint32_t x = x_offset; x < x_offset + readMask.bmp_info_header.width; x++) {
+        for (uint32_t y = y_offset; y < y_offset + readMask->bmp_info_header.height; y++) {
+            for (uint32_t x = x_offset; x < x_offset + readMask->bmp_info_header.width; x++) {
                 dataPos = channels * (y * bmp_info_header.width + x);
-                i = channels * ((y - y_offset) * readMask.bmp_info_header.width + (x - x_offset));
+                i = channels * ((y - y_offset) * readMask->bmp_info_header.width + (x - x_offset));
                 switch (bmp_info_header.bit_count) {
 
                 case 8: {
-                    if (readMask.data[i] > bwThreshold) {
-                        data[dataPos] = readMask.data[i];
-                        classMap[dataPos] = readMask.data[i];
+                    if (readMask->data[i] == 255) {
+                        data[dataPos] = 255;
+                        classMap[dataPos / 8] |= (0x01 << (8 - dataPos % 8));
                     }
                     break;
                 }
 
                 case 24:
                 case 32: {
-                    if (readMask.data[i] + readMask.data[(size_t)i + 1] + readMask.data[(size_t)i + 2] >= bwThreshold * 3) {
+                    if (readMask->data[i] + readMask->data[(size_t)i + 1] + readMask->data[(size_t)i + 2] >= bwThreshold * 3) {
                         if (channels == 4) {
-                            alphaOverlay(data, readMask.data, i, dataPos);
-                            alpha = readMask.data[(size_t)i + 3];
+                            alphaOverlay(data, readMask->data, i, dataPos);
+                            alpha = readMask->data[(size_t)i + 3];
                         }
-                        set_pixel(x, y, readMask.data[i + 0], readMask.data[(size_t)i + 1], readMask.data[(size_t)i + 2], alpha);
-                        classMap[dataPos] = readMask.data[i];
-                        classMap[dataPos + 1] = readMask.data[i];
-                        classMap[dataPos + 2] = readMask.data[i];
+                        set_pixel(x, y, readMask->data[i + 0], readMask->data[(size_t)i + 1], readMask->data[(size_t)i + 2], alpha);
                     }
                     break;
                 }
@@ -536,10 +564,6 @@ void BMP::overlay(const char* mask) {
             }
         }
     }
-    //std::ofstream classMapFile;
-    //classMapFile.open("classMapEx.txt", std::ios::out | std::ios::binary);
-    //classMapFile.write((char*)&classMap[0], classMap.size() * sizeof(uint8_t));
-    //classMapFile.close();
 }
 
 void BMP::alphaOverlay(std::vector<uint8_t>& background, std::vector<uint8_t>& mask, uint32_t i, uint32_t pos) {
@@ -573,6 +597,22 @@ void BMP::filter_channel(bool b, bool g, bool r) {
     if (r == false)
         for (int32_t i = 2; i < data.size(); i += channels)
             data[i] = 0;
+}
+
+void BMP::createDefect() {
+    BMP* newDefect = new BMP();
+    newDefect->newBMP(20, 20, 8);
+    newDefect->data.resize(newDefect->bmp_info_header.width * newDefect->bmp_info_header.height);
+    int x = 0, y = 0, c = 0, max = 15, min = 7;
+    float m = 0.5f;
+    x = min;
+    for (int i = 0; x < max; i++) {
+        c = 0;
+        y = m * x + c; //line
+        newDefect->data[y * newDefect->row_stride + x] = 255;
+        x++;
+    }
+    newDefect->write("lineDefect.bmp");
 }
 
 //void BMP::draw_rectangle(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h,
@@ -711,6 +751,22 @@ void BMP::make_stride_aligned() {
         break;
     }
 
+    }
+}
+
+void BMP::rowStride(uint16_t& bitSize) {
+    switch (bitSize) {
+    case 32:
+    case 24:
+    case 8: {
+        row_stride = bmp_info_header.width * channels;
+        break;
+    }
+    case 4:
+    case 1: {
+        row_stride = 4 * ((bmp_info_header.width * bmp_info_header.bit_count + 31) / 32);
+        break;
+    }
     }
 }
 
