@@ -3,10 +3,10 @@
 
 #include <iostream>
 #include <fstream>
-#include <stdlib.h>
 #include <string>
 #include <filesystem>
 #include <random>
+#include <vector>
 
 #include "rwFile.hpp"
 #include "cnn.hpp"

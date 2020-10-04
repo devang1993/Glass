@@ -17,6 +17,7 @@ public:
     int8_t redThreshold;
     int8_t bwThreshold;
     std::vector<uint8_t> data;
+    std::vector<uint8_t> classMap;
 
     BMP();
     ~BMP();
@@ -35,15 +36,19 @@ public:
 
     void write(const char* fname);
 
+    void blob(uint8_t blobMaskSize);
+
     void add_alpha(uint8_t alpha);
 
-    void overlay(const char* mask);
+    void overlay(BMP* readMask);
 
     void alphaOverlay(std::vector<uint8_t>& background, std::vector<uint8_t>& mask, uint32_t i, uint32_t pos);
     // set alpha chanel on mask for red threshold
     void setAlpha(uint8_t alpha);
 
     void filter_channel(bool b, bool g, bool r);
+
+    void createDefect();
 
     //// view file on disk
     //void showImage(const char* fname);
@@ -130,6 +135,8 @@ private:
 
     // Add 1 to the row_stride until it is divisible with align_stride
     void make_stride_aligned();
+
+    void rowStride(uint16_t& bitSize);
 
     // Check if the pixel data is stored as BGRA and if the color space type is sRGB
     void check_color_header(BMPColorHeader& bmp_color_header);
