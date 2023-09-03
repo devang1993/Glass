@@ -1,2 +1,1 @@
-# Glass
-Code to detect defects on glass panels
+Code to convert 24 or 32 bit images to other bit formats
